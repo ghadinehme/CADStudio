@@ -20,6 +20,7 @@ and [Three.js](https://threejs.org/) in the browser.
 ## Table of contents
 
 - [Why Studio CAD](#why-studio-cad)
+- [Community & contributing](#community--contributing)
 - [Feature overview](#feature-overview)
 - [Quick start](#quick-start)
 - [Using the app](#using-the-app)
@@ -29,8 +30,6 @@ and [Three.js](https://threejs.org/) in the browser.
 - [REST API](#rest-api)
 - [Performance](#performance)
 - [Project layout](#project-layout)
-- [Limitations & roadmap](#limitations--roadmap)
-- [Community & contributing](#community--contributing)
 - [License](#license)
 
 ---
