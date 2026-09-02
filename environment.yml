@@ -1,0 +1,16 @@
+# Studio CAD — conda environment (the most reliable way to get CadQuery/OCCT).
+#   conda env create -f environment.yml
+#   conda activate studio-cad
+#   ./run.sh
+name: studio-cad
+channels:
+  - cadquery
+  - conda-forge
+dependencies:
+  - python>=3.10
+  - cadquery
+  - numpy
+  - pip
+  - pip:
+      - flask
+      - flask-cors

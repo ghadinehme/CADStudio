@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Studio CAD</title>
+<link rel="stylesheet" href="css/style.css?v=40" />
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+<header id="toolbar">
+  <div class="grp brand"><span class="material-icons-outlined">view_in_ar</span><b>Studio</b><span class="dim">CAD</span></div>
+  <div class="sep"></div>
+  <div class="grp">
+    <button class="tb" data-tip="New" onclick="App.reset()"><span class="material-icons-outlined">note_add</span></button>
+    <button class="tb" data-tip="Import CadQuery .py" onclick="App.pickImport('py')"><span class="material-icons-outlined">upload_file</span><small>.py</small></button>
+    <button class="tb" data-tip="Import STEP as a body" onclick="App.pickImport('solid')"><span class="material-icons-outlined">view_in_ar</span><small>+STEP</small></button>
+    <button class="tb" data-tip="View STEP / STL" onclick="App.pickImport('mesh')"><span class="material-icons-outlined">visibility</span></button>
+  </div>
+  <div class="sep"></div>
+  <div class="grp">
+    <button class="tb" data-tip="Export STL" onclick="App.export('stl')"><span class="material-icons-outlined">download</span><small>STL</small></button>
+    <button class="tb" data-tip="Export STEP" onclick="App.export('step')"><span class="material-icons-outlined">download</span><small>STEP</small></button>
+    <button class="tb" data-tip="Export CadQuery .py" onclick="App.export('script')"><span class="material-icons-outlined">code</span><small>.py</small></button>
+  </div>
+  <div class="sep"></div>
+  <div class="grp">
+    <button class="tb" data-tip="Undo (Ctrl+Z)" onclick="App.undo()"><span class="material-icons-outlined">undo</span></button>
+    <button class="tb" data-tip="Redo (Ctrl+Shift+Z)" onclick="App.redo()"><span class="material-icons-outlined">redo</span></button>
+    <button class="tb" data-tip="Code panel" onclick="App.toggleCode()"><span class="material-icons-outlined">terminal</span></button>
+    <button class="tb" data-tip="Fit (F)" onclick="Viewport.fit()"><span class="material-icons-outlined">filter_center_focus</span></button>
+    <button class="tb" data-tip="Grid" onclick="Viewport.toggleGrid()"><span class="material-icons-outlined">grid_on</span></button>
+    <button class="tb" data-tip="Show / hide axes" onclick="Viewport.toggleAxes()"><span class="material-icons-outlined">open_with</span></button>
+    <button class="tb" data-tip="Show / hide datum planes" onclick="Viewport.toggleDatums()"><span class="material-icons-outlined">layers</span></button>
+    <button class="tb" data-tip="Display mode (shaded / edges / wireframe)" onclick="App.cycleDisplay()"><span class="material-icons-outlined">deblur</span></button>
+    <button class="tb" data-tip="Theme" onclick="App.toggleTheme()"><span class="material-icons-outlined" id="theme-ic">dark_mode</span></button>
+  </div>
+  <div class="sep"></div>
+  <div class="grp ops">
+    <button class="tb op" data-tip="Datum plane" onclick="App.addOp('datum_plane')"><span class="material-icons-outlined">layers</span><small>Plane</small></button>
+    <button class="tb op" data-tip="Sketch" onclick="App.startSketch()"><span class="material-icons-outlined">draw</span><small>Sketch</small></button>
+    <button class="tb op" data-tip="Extrude" onclick="App.addOp('extrude')"><span class="material-icons-outlined">expand</span><small>Extrude</small></button>
+    <button class="tb op" data-tip="Revolve" onclick="App.addOp('revolve')"><span class="material-icons-outlined">cyclone</span><small>Revolve</small></button>
+    <button class="tb op" data-tip="Hole (click a face)" onclick="App.startHole()"><span class="material-icons-outlined">circle</span><small>Hole</small></button>
+    <button class="tb op" data-tip="Fillet" onclick="App.addOp('fillet')"><span class="material-icons-outlined">rounded_corner</span><small>Fillet</small></button>
+    <button class="tb op" data-tip="Chamfer" onclick="App.addOp('chamfer')"><span class="material-icons-outlined">cut</span><small>Chamfer</small></button>
+    <button class="tb op" data-tip="Shell" onclick="App.addOp('shell')"><span class="material-icons-outlined">inventory_2</span><small>Shell</small></button>
+    <button class="tb op" data-tip="Mirror" onclick="App.addOp('mirror')"><span class="material-icons-outlined">flip</span><small>Mirror</small></button>
+    <button class="tb op" data-tip="Linear pattern" onclick="App.addOp('linear_pattern')"><span class="material-icons-outlined">view_column</span><small>Linear</small></button>
+    <button class="tb op" data-tip="Circular pattern" onclick="App.addOp('circular_pattern')"><span class="material-icons-outlined">data_usage</span><small>Circular</small></button>
+    <button class="tb op" data-tip="Boolean" onclick="App.addOp('boolean')"><span class="material-icons-outlined">join_inner</span><small>Boolean</small></button>
+  </div>
+  <div class="sep"></div>
+  <div class="grp">
+    <button class="tb" id="btn-measure" data-tip="Measure (M)" onclick="App.toggleMeasure()"><span class="material-icons-outlined">straighten</span><small>Measure</small></button>
+    <button class="tb" id="btn-section" data-tip="Section view" onclick="App.toggleSection()"><span class="material-icons-outlined">content_cut</span><small>Section</small></button>
+  </div>
+</header>
+
+<div id="main">
+  <aside id="left">
+    <div class="panel-head">Bodies</div>
+    <div id="bodies"></div>
+    <div class="panel-head">Feature Tree</div>
+    <div id="tree"></div>
+  </aside>
+
+  <div id="stage">
+    <canvas id="view"></canvas>
+    <div id="status">Ready</div>
+    <div id="perf" title="last rebuild time"></div>
+    <div id="sel-info" class="hidden"></div>
+    <div id="dropzone" class="hidden"><div class="dz-inner"><span class="material-icons-outlined">file_upload</span><div>Drop a <b>.py</b>, <b>.stl</b> or <b>.step</b> to load</div></div></div>
+
+    <!-- PropertyManager (SolidWorks/Onshape-style feature panel) -->
+    <div id="pm" class="hidden">
+      <div id="pm-head">
+        <span id="pm-title"></span>
+        <span class="spacer"></span>
+        <button id="pm-ok" class="pm-btn ok" onclick="PM.apply()" title="OK"><span class="material-icons-outlined">check</span></button>
+        <button class="pm-btn cancel" onclick="PM.cancel()" title="Cancel"><span class="material-icons-outlined">close</span></button>
+      </div>
+      <div id="pm-body"></div>
+    </div>
+
+    <!-- Navigation cube (Onshape-style): mirrors the camera; click a face,
+         edge or corner to orient. Drives the same camera as Viewport.setView. -->
+    <div id="navcube">
+      <canvas id="navcube-canvas" title="Click a face, edge or corner to orient"></canvas>
+    </div>
+
+    <!-- Measure readout -->
+    <div id="measure-readout" class="hidden"></div>
+
+    <!-- Section controls -->
+    <div id="section-panel" class="hidden">
+      <span class="material-icons-outlined" style="font-size:16px;color:var(--accent2)">content_cut</span>
+      <span>Section</span>
+      <select id="sec-axis" onchange="App.updateSection()"><option value="z">Z</option><option value="x">X</option><option value="y">Y</option></select>
+      <input type="range" id="sec-off" min="-100" max="100" value="0" step="0.5" oninput="App.updateSection()">
+      <span id="sec-val" class="dim">0</span>
+      <button class="mini" onclick="App.toggleSection()" title="Close"><span class="material-icons-outlined">close</span></button>
+    </div>
+
+    <!-- Plane-pick hint (shown when choosing a sketch plane) -->
+    <div id="plane-hint" class="hidden"><span class="material-icons-outlined">ads_click</span> Click a base plane or a model face to sketch on &nbsp;·&nbsp; <kbd>Esc</kbd> to cancel</div>
+
+    <!-- In-viewport 3D sketch toolbar -->
+    <div id="sk3d-bar" class="hidden">
+      <span class="sk3d-title"><span class="material-icons-outlined">draw</span> Sketching</span>
+      <button class="sk" data-tool="select" onclick="App.sk3d.tool('select')" title="Move / select — drag a vertex to move; click a primitive or drag a box to select, then Delete to remove"><span class="material-icons-outlined">open_with</span>Move</button>
+      <button class="sk on" data-tool="line" onclick="App.sk3d.tool('line')"><span class="material-icons-outlined">show_chart</span>Line</button>
+      <button class="sk" data-tool="rect" onclick="App.sk3d.tool('rect')"><span class="material-icons-outlined">crop_square</span>Rect</button>
+      <button class="sk" data-tool="circle" onclick="App.sk3d.tool('circle')"><span class="material-icons-outlined">circle</span>Circle</button>
+      <button class="sk" data-tool="arc" onclick="App.sk3d.tool('arc')"><span class="material-icons-outlined">architecture</span>Arc</button>
+      <button class="sk" data-tool="polygon" onclick="App.sk3d.tool('polygon')"><span class="material-icons-outlined">pentagon</span>Poly</button>
+      <input type="number" id="sk3d-ngon" value="6" min="3" max="20" title="Polygon sides" style="width:42px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px">
+      <button class="sk" data-tool="slot" onclick="App.sk3d.tool('slot')"><span class="material-icons-outlined">straighten</span>Slot</button>
+      <span class="sk3d-sep"></span>
+      <label class="chk"><input type="checkbox" id="sk3d-snap" checked> Snap</label>
+      <button class="mini" onclick="App.sk3d.normalView()" title="Look normal to plane"><span class="material-icons-outlined">crop_free</span></button>
+      <button class="mini" onclick="App.sk3d.undo()" title="Undo point"><span class="material-icons-outlined">undo</span></button>
+      <button class="mini" onclick="App.sk3d.deleteSelection()" title="Delete selected primitives (Del)"><span class="material-icons-outlined">backspace</span></button>
+      <button class="mini" onclick="App.sk3d.clear()" title="Clear all"><span class="material-icons-outlined">delete_sweep</span></button>
+      <span class="spacer"></span>
+      <span id="sk3d-coord" class="dim">0, 0</span>
+      <button class="btn primary" onclick="App.sk3d.finish()">Finish</button>
+      <button class="btn" onclick="App.sk3d.cancel()">Cancel</button>
+    </div>
+  </div>
+
+  <aside id="right" class="hidden">
+    <div class="panel-head row">
+      <span>CadQuery Code</span>
+      <span class="spacer"></span>
+      <button class="mini" onclick="App.runCode()" title="Run (Ctrl+Enter)"><span class="material-icons-outlined" style="color:#34d399">play_arrow</span></button>
+      <button class="mini" onclick="App.refreshCode()" title="Refresh from tree"><span class="material-icons-outlined">refresh</span></button>
+      <button class="mini" onclick="App.copyCode()" title="Copy"><span class="material-icons-outlined">content_copy</span></button>
+    </div>
+    <div id="code-status"></div>
+    <textarea id="code" spellcheck="false"></textarea>
+  </aside>
+</div>
+
+<!-- Dialog -->
+<div id="dlg-back" class="hidden" onclick="App.closeDialog(event)">
+  <div id="dlg" onclick="event.stopPropagation()">
+    <div id="dlg-title">Feature</div>
+    <div id="dlg-body"></div>
+    <div id="dlg-foot">
+      <button class="btn primary" onclick="App.submitDialog()" id="dlg-ok">Add</button>
+      <button class="btn" onclick="App.closeDialog()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sketcher -->
+<div id="sketch-back" class="hidden">
+  <div id="sketcher">
+    <div id="sk-head">
+      <b>Sketch</b>
+      <select id="sk-plane" title="Sketch plane"></select>
+      <div class="sk-tools">
+        <button class="sk on" data-tool="line" onclick="App.sk.tool('line')"><span class="material-icons-outlined">show_chart</span>Line</button>
+        <button class="sk" data-tool="rect" onclick="App.sk.tool('rect')"><span class="material-icons-outlined">crop_square</span>Rect</button>
+        <button class="sk" data-tool="circle" onclick="App.sk.tool('circle')"><span class="material-icons-outlined">circle</span>Circle</button>
+        <button class="sk" data-tool="arc" onclick="App.sk.tool('arc')"><span class="material-icons-outlined">architecture</span>Arc</button>
+      </div>
+      <span class="spacer"></span>
+      <label class="chk"><input type="checkbox" id="sk-snap" checked> Snap</label>
+      <button class="mini" onclick="App.sk.undo()" title="Undo point"><span class="material-icons-outlined">undo</span></button>
+      <button class="mini" onclick="App.sk.clear()" title="Clear"><span class="material-icons-outlined">delete_sweep</span></button>
+      <button class="btn primary" onclick="App.sk.finish()">Finish Sketch</button>
+      <button class="btn" onclick="App.sk.cancel()">Cancel</button>
+    </div>
+    <div id="sk-wrap"><canvas id="sk-canvas"></canvas><span id="sk-coord">0, 0</span></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<div id="busy" class="hidden"><div class="spin"></div></div>
+<input type="file" id="file-py" accept=".py" hidden>
+<input type="file" id="file-mesh" accept=".step,.stp,.stl" hidden>
+<input type="file" id="file-solid" accept=".step,.stp" hidden>
+
+<script src="js/viewport.js?v=40"></script>
+<script src="js/sketcher.js?v=40"></script>
+<script src="js/sketch3d.js?v=40"></script>
+<script src="js/pm.js?v=40"></script>
+<script src="js/app.js?v=40"></script>
+</body>
+</html>

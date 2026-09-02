@@ -1,0 +1,4 @@
+cadquery
+flask
+flask-cors
+numpy
